@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Semakan BLS &amp; Lesen ARC</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============ TETAPAN ============
+   Tampal pautan CSV tab "Awam" (Fail → Kongsi → Terbitkan ke web → tab Awam → CSV). */
+</style>
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQAhQXgnDAYVF_5XpqrPM_BW_Dg3hywuCljsrN64qvYY3m7nDBrBFHD04R-9qcYc0YgJe1Go8js5lod/pub?gid=412539777&single=true&output=csv';
+const HARI_AMARAN = 60;   // kuning bila tinggal ≤ 60 hari
+const PAPAR_SIJIL = true; // false = sembunyikan butang lihat sijil/lesen
+
+// Pautan Google Form (butang "Kemas kini rekod saya")
+const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfxwr0LbIafca6IKZPqdHOPYmHwF4Uyc-ObXNk4DZlLWecIhA/viewform';
+// Pilihan: isi awal borang. Dalam Form → ⋮ → "Get pre-filled link", isi contoh, salin pautan,
+// dan salin nombor entry.XXXX bagi setiap soalan ke sini. Biar '' jika tidak mahu.
+const PREFILL = {
+  nombor:   'entry.268472341',   // No. LPP / No. Staf   cth. 'entry.1234567890'
+  nama:     'entry.680632477',   // Nama Penuh
+  hospital: 'entry.1122839272',   // Hospital / Fasiliti
+  kategori: 'entry.333556711',   // Kategori
+  jawatan:  'entry.990280470'    // Jawatan
+};
+</script>
+<style>
+:root{--navy:#1E1F55;--navy2:#2B2D72;--gold:#F6C744;--ink:#1B1C3A;--muted:#5D6285;--line:#E3E5F0;--bg:#F4F5FA;--card:#fff;
+--ok:#1452B8;--okbg:#E3EDFC;--warn:#8A5A00;--warnbg:#FFF3D6;--bad:#B42318;--badbg:#FDE8E6;--none:#5D6285;--nonebg:#EEF0F6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Montserrat,system-ui,sans-serif}
+header{background:linear-gradient(135deg,var(--hd1,var(--navy)),var(--hd2,var(--navy2)));color:#fff;padding:28px 16px 64px;text-align:center}
+header small{display:inline-block;background:var(--gold);color:var(--navy);font-weight:800;font-size:11px;letter-spacing:2px;padding:4px 12px;border-radius:99px}
+header h1{margin:12px 0 4px;font-size:24px;font-weight:800;letter-spacing:-.3px}
+header p{margin:0;color:#C9CEEA;font-size:14px}
+main{max-width:480px;margin:-44px auto 32px;padding:0 16px}
+.card{background:var(--card);border-radius:18px;box-shadow:0 10px 30px rgba(30,31,85,.12);padding:22px}
+.status{border-radius:14px;padding:18px;text-align:center;margin-bottom:18px}
+.status .lbl{font-size:12px;font-weight:700;letter-spacing:2px;opacity:.8}
+.status .big{font-size:30px;font-weight:800;letter-spacing:.5px;margin:2px 0}
+.status .sub{font-size:14px;font-weight:600}
+.s-ok{background:var(--okbg);color:var(--ok)} .s-warn{background:var(--warnbg);color:var(--warn)}
+.s-bad{background:var(--badbg);color:var(--bad)} .s-none{background:var(--nonebg);color:var(--none)}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:14px}
+dt{color:var(--muted)} dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.other{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px}
+.pill{font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap}
+.foot{margin-top:14px;font-size:12px;color:var(--muted);text-align:center}
+form{display:flex;flex-direction:column;gap:10px}
+label{font-size:14px;font-weight:600}
+.row{display:flex;gap:8px}
+input,select{font:inherit;padding:12px;border:1.5px solid var(--line);border-radius:10px;min-width:0}
+input{flex:1} input:focus,select:focus{outline:2px solid var(--gold);border-color:var(--navy)}
+button{font:inherit;font-weight:700;background:var(--navy);color:#fff;border:0;border-radius:10px;padding:12px 18px;cursor:pointer}
+body.bls{--hd2:#A3123A;--acc:#A3123A} body.arc{--hd2:#0E6E78;--acc:#0E6E78}
+/* warna ikut status: biru SAH, kuning HAMPIR TAMAT, merah TAMAT */
+body.st-ok{--hd1:#061F4F;--hd2:#0F48A8;--acc:#0D3F94}
+body.st-warn{--hd1:#4A2F00;--hd2:#8C6100;--acc:#6E4A00}
+body.st-bad{--hd1:#4D0C08;--hd2:#9C1B13;--acc:#8E1810}
+body.st-ok,body.st-warn,body.st-bad{min-height:100vh;background-attachment:fixed}
+body.st-ok{background:linear-gradient(180deg,#B9CDEF 0%,#E2EAF8 100%)}
+body.st-warn{background:linear-gradient(180deg,#EED9A0 0%,#F8EED2 100%)}
+body.st-bad{background:linear-gradient(180deg,#EDBDB8 0%,#F9E1DE 100%)}
+body.st-ok .status{background:linear-gradient(135deg,#082E73,#1452B8);color:#fff}
+body.st-warn .status{background:linear-gradient(135deg,#C98E0A,#EDB52A);color:#2B1D00}
+body.st-bad .status{background:linear-gradient(135deg,#7A140D,#C02A1F);color:#fff}
+body.st-ok .btn-main,body.st-warn .btn-main,body.st-bad .btn-main{background:linear-gradient(135deg,var(--hd1),var(--hd2))}
+body.st-ok .status .lbl,body.st-bad .status .lbl{opacity:.9}
+.tag{display:inline-flex;align-items:center;gap:6px;background:#fff;color:var(--acc,var(--navy));font-weight:800;font-size:12px;letter-spacing:2px;padding:4px 12px;border-radius:99px;margin-top:10px}
+.btn{display:block;text-align:center;text-decoration:none;font-weight:700;border-radius:10px;padding:12px 18px;margin-top:16px}
+.btn-main{background:var(--acc,var(--navy));color:#fff}
+.btn-alt{border:1.5px solid var(--line);color:var(--navy);margin-top:10px}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.msg{text-align:center;color:var(--muted);padding:20px 0}
+.again{display:block;text-align:center;margin-top:16px;font-size:14px;color:var(--navy);font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <small>KAD TnG EDISI SAMBUTAN</small>
+  <h1 id="tajuk">Semakan BLS &amp; Lesen ARC</h1>
+  <p>Hari Pembantu Perubatan 2027</p>
+  <span class="tag" id="tag" hidden></span>
+</header>
+<main><div class="card" id="out" aria-live="polite"><p class="msg">Memuatkan…</p></div></main>
+<script>
+const $out = document.getElementById('out');
+const norm = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const BULAN = ['Jan','Feb','Mac','Apr','Mei','Jun','Jul','Ogo','Sep','Okt','Nov','Dis'];
+
+function parseCSV(t){const rows=[];let r=[],c='',q=false;t=t.replace(/\r\n?/g,'\n');
+  for(let i=0;i<t.length;i++){const ch=t[i];
+    if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch;continue}
+    if(ch==='"'){q=true;continue} if(ch===','){r.push(c);c='';continue}
+    if(ch==='\n'){r.push(c);rows.push(r);r=[];c='';continue} c+=ch}
+  if(c!==''||r.length){r.push(c);rows.push(r)} return rows}
+function toDate(s){
+  s = String(s || '').trim(); let m;
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return new Date(+m[1], m[2]-1, +m[3]);
+  if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/))) return new Date(+m[3], m[2]-1, +m[1]);
+  return null;
+}
+const fmt = d => d ? `${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}` : '–';
+function status(tamatStr){
+  const d = toDate(tamatStr);
+  if (!d) return {cls:'s-none', big:'TIADA REKOD', sub:'Tarikh tamat belum diisi', d};
+  const today = new Date(); today.setHours(0,0,0,0);
+  const hari = Math.round((d - today) / 864e5);
+  if (hari < 0) return {cls:'s-bad', big:'TAMAT TEMPOH', sub:`Tamat ${fmt(d)}`, d};
+  if (hari <= HARI_AMARAN) return {cls:'s-warn', big:'SAH · HAMPIR TAMAT', sub:`Tamat ${fmt(d)} (${hari} hari lagi)`, d};
+  return {cls:'s-ok', big:'SAH', sub:`Sah hingga ${fmt(d)}`, d};
+}
+
+function pautanForm(rec){
+  if (!FORM_URL || FORM_URL.startsWith('TAMPAL')) return '';
+  const u = new URL(FORM_URL);
+  if (rec) {
+    const isi = {nombor: rec['Kod'], nama: rec['Nama'], hospital: rec['Hospital'], kategori: rec['Kategori'], jawatan: rec['Jawatan']};
+    let ada = false;
+    for (const k in PREFILL) if (PREFILL[k] && isi[k]) { u.searchParams.set(PREFILL[k], isi[k]); ada = true; }
+    if (ada) u.searchParams.set('usp', 'pp_url');
+  }
+  return u.toString();
+}
+function driveView(v){
+  const u = String(v || '').split(/[,\s]+/).find(x => /^https?:\/\//.test(x));
+  if (!u) return '';
+  const m = u.match(/[?&]id=([\w-]+)/) || u.match(/\/d\/([\w-]+)/);
+  return m ? `https://drive.google.com/file/d/${m[1]}/view` : u;
+}
+function dok(rec, jenis){
+  if (!PAPAR_SIJIL) return '';
+  const arc = jenis === 'arc', nama = arc ? 'lesen ARC' : 'sijil BLS';
+  const u = driveView(rec[arc ? 'ARC Lesen' : 'BLS Sijil']);
+  return u ? `<a class="btn btn-alt" href="${esc(u)}" target="_blank" rel="noopener">Lihat ${nama}</a>`
+           : `<p class="hint" style="text-align:center;margin-top:14px">Salinan ${nama} belum dimuat naik.</p>`;
+}
+function tema(jenis){
+  document.body.className = jenis || '';
+  const t = document.getElementById('tag');
+  document.getElementById('tajuk').textContent = jenis === 'arc' ? 'Semakan Lesen ARC' : (jenis ? 'Semakan Sijil BLS' : 'Semakan BLS & Lesen ARC');
+  t.hidden = !jenis; t.textContent = jenis === 'arc' ? 'LESEN ARC LPP' : 'BASIC LIFE SUPPORT';
+  document.title = jenis === 'arc' ? 'Semakan Lesen ARC' : (jenis ? 'Semakan BLS' : 'Semakan BLS & ARC');
+}
+function borang(pesan){
+  tema('');
+  const f = pautanForm(null);
+  $out.innerHTML = `${pesan ? `<p class="msg">${pesan}</p>` : ''}
+  <form id="f"><label for="no">No. LPP / No. Staf</label>
+    <div class="row"><select id="jenis" aria-label="Jenis sijil"><option value="bls">BLS</option><option value="arc">Lesen ARC</option></select>
+    <input id="no" required autocomplete="off" placeholder="cth. 6198"></div>
+    <button>Semak</button><p class="hint">Atau imbas kod QR pada belakang Kad TnG.</p></form>
+  ${f ? `<a class="btn btn-alt" href="${esc(f)}" target="_blank" rel="noopener">Daftar / kemas kini rekod</a>` : ''}`;
+  document.getElementById('f').onsubmit = e => { e.preventDefault();
+    const p = new URLSearchParams({[document.getElementById('jenis').value]: document.getElementById('no').value.trim()});
+    history.replaceState(null, '', '?' + p); mula(); };
+}
+
+function papar(rec, jenis){
+  tema(jenis);
+  const J = jenis.toUpperCase();
+  const su = status(rec[J + ' Tamat']);
+  document.body.classList.add('st-' + su.cls.slice(2));
+  const f = pautanForm(rec);
+  $out.innerHTML = `<div class="status ${su.cls}"><div class="lbl">${jenis === 'arc' ? 'LESEN ARC LPP' : 'SIJIL BLS'}</div><div class="big">${su.big}</div><div class="sub">${esc(su.sub)}</div></div>
+    <dl><dt>Nama</dt><dd>${esc(rec['Nama'])}</dd><dt>Jawatan</dt><dd>${esc(rec['Jawatan'])}</dd>
+    <dt>Fasiliti</dt><dd>${esc(rec['Hospital'])}</dd></dl>
+    ${dok(rec, jenis)}
+    ${f ? `<a class="btn btn-main" href="${esc(f)}" target="_blank" rel="noopener">Kemas kini rekod saya</a>` : ''}
+    <p class="foot">Rekod dikemas kini ${fmt(toDate(rec['Dikemas kini']))} · diisi sendiri oleh pemegang kad<br>Rekod baharu dipaparkan dalam ±5 minit selepas borang dihantar.</p>
+    <a class="again" href="?">Semak nombor lain</a>`;
+}
+
+async function mula(){
+  const q = new URLSearchParams(location.search);
+  const jenis = q.has('arc') ? 'arc' : (q.has('bls') ? 'bls' : '');
+  const kod = norm(q.get(jenis));
+  if (!jenis || !kod) return borang('');
+  $out.innerHTML = '<p class="msg">Menyemak…</p>';
+  try {
+    if (CSV_URL.startsWith('TAMPAL')) throw new Error('belum ditetapkan');
+    const res = await fetch(CSV_URL + (CSV_URL.includes('?') ? '&' : '?') + 't=' + Math.floor(Date.now() / 6e4));
+    if (!res.ok) throw new Error(res.status);
+    const [head, ...rows] = parseCSV(await res.text());
+    const row = rows.find(r => norm(r[0]) === kod);
+    if (!row) return borang(`Tiada rekod untuk <b>${esc(q.get(jenis))}</b>. Pemegang kad perlu isi borang pendaftaran dahulu.`);
+    const rec = Object.fromEntries(head.map((h, i) => [h.trim(), row[i] || '']));
+    papar(rec, jenis);
+  } catch (e) {
+    $out.innerHTML = `<p class="msg">Tidak dapat memuatkan rekod sekarang. Cuba lagi sebentar.</p><a class="again" href="">Cuba semula</a>`;
+    console.error(e);
+  }
+}
+mula();
+</script>
+</body>
+</html>
